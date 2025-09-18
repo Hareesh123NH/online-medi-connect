@@ -1,26 +1,32 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const db = require("../db");
+
+// Import Mongoose models
+const Admin = require("../models/Admin");
+const Doctor = require("../models/Doctor");
+const Patient = require("../models/Patient");
 
 const router = express.Router();
-const JWT_SECRET=process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
- * ✅ Unified Login (for patient/doctor/admin)
+ * ✅ Unified Login (for patient/doctor/admin) - MongoDB
  */
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
   const { email, password, role } = req.body;
 
   if (!email || !password || !role) {
-    return res.status(400).json({ message: "Email, password and role are required" });
+    return res
+      .status(400)
+      .json({ message: "Email, password and role are required" });
   }
 
-  // Map roles to tables & id fields
+  // Map roles to Mongoose models & id fields
   const roleMap = {
-    patient: { table: "patients", idField: "patient_id" },
-    doctor: { table: "doctors", idField: "doctor_id" },
-    admin: { table: "admins", idField: "admin_id" }
+    patient: { model: Patient, idField: "_id" },
+    doctor: { model: Doctor, idField: "_id" },
+    admin: { model: Admin, idField: "_id" },
   };
 
   const roleInfo = roleMap[role];
@@ -28,16 +34,14 @@ router.post("/login", (req, res) => {
     return res.status(400).json({ message: "Invalid role" });
   }
 
-  // Query the respective table
-  const sql = `SELECT * FROM ${roleInfo.table} WHERE email = ?`;
-  db.query(sql, [email], async (err, result) => {
-    if (err) return res.status(500).json({ error: err });
-
-    if (result.length === 0) {
+  try {
+    // Find user in respective collection
+    const user = await roleInfo.model.findOne({ email });
+    if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const user = result[0];
+    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -52,9 +56,13 @@ router.post("/login", (req, res) => {
 
     res.status(200).json({
       message: "Login successful",
-      token
+      token,
+      role,
     });
-  });
+  } catch (error) {
+    console.error("Login Error:", error);
+    res.status(500).json({ message: "Server error", error });
+  }
 });
 
 module.exports = router;
