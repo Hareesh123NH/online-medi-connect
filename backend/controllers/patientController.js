@@ -198,27 +198,33 @@ const getRejectedAppointmentsForPatient = async (req, res) => {
 //list of doctors search for doctor 
 const getDoctors = async (req, res) => {
     try {
-        const { name, specialization} = req.body || {};
+        const { query } = req.body || {};
 
-        let {page, limit }=req.body || {};
+        let { page, limit } = req.body || {};
 
         const skip = (page - 1) * limit;
 
-        if(!limit) limit=5;
+        if (!limit) limit = 5;
 
-        if(!page) page=1;
+        if (!page) page = 1;
 
         // Build filter
-        const filter = {};
-        if (name) {
-            filter.name = { $regex: name, $options: "i" }; // case-insensitive
+        let filter = {};
+        if (query) {
+            filter.$or = [
+                { name: { $regex: query, $options: "i" } },
+                { specialization: { $regex: query, $options: "i" } }
+            ];
         }
-        if (specialization) {
-            filter.specialization = { $regex: specialization, $options: "i" };
-        }
-
         // Count doctors
         const totalDoctors = await Doctor.countDocuments(filter);
+
+        // If name/specialization provided but no doctors found
+        if (totalDoctors === 0) {
+            return res.status(404).json({
+                message: "No doctors found matching the given criteria"
+            });
+        }
 
         if (page > Math.ceil(totalDoctors / limit)) {
             return res.status(200).json({
@@ -226,13 +232,7 @@ const getDoctors = async (req, res) => {
             });
         }
 
-        // If name/specialization provided but no doctors found
-        if (totalDoctors === 0) {
-            return res.status(404).json({
-                message: "No doctors found matching the given criteria",
-                doctors: [],
-            });
-        }
+
 
         // Fetch doctors with pagination
         const doctors = await Doctor.find(filter)
@@ -242,7 +242,7 @@ const getDoctors = async (req, res) => {
             .sort({ createdAt: -1 });
 
         // If no doctors at all in DB
-        if (!name && !specialization && doctors.length === 0) {
+        if (doctors.length === 0) {
             return res.status(404).json({
                 message: "No doctors available in the system",
                 doctors: [],
@@ -256,9 +256,9 @@ const getDoctors = async (req, res) => {
                 count: totalDoctors,
                 page,
                 limit,
-                isNextPageAvailable: page+1 <= Math.ceil(totalDoctors / limit),
+                isNextPageAvailable: page + 1 <= Math.ceil(totalDoctors / limit),
             },
-        }); 
+        });
     } catch (error) {
         console.error("Error fetching doctors:", error);
         return res.status(500).json({ message: "Server error" });
