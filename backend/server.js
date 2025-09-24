@@ -5,16 +5,21 @@ require('dotenv').config();
 const mongoose = require("mongoose");
 const PORT=process.env.PORT;
 
+// 👉 Middleware
+const authMiddleware = require("./middlewares/authMiddleware");
+
 
 //Routes
-const patientRoutes=require('./routers/patientRoutes');
-const auth=require("./controllers/auth");
+const patientRoutes=require('./routers/patientRouter');
+const authRouter=require("./routers/authRouter");
+const adminRouter=require("./routers/adminRouter");
+const doctorRouter=require("./routers/doctorRouter");
 
 app.use(express.json());
-
-
 app.use('/patient',patientRoutes);
-app.use('/auth',auth);
+app.use('/auth',authRouter);
+app.use('/admin',authMiddleware("admin"),adminRouter)
+app.use("/doctor",doctorRouter)
 
 
 mongoose.connect(process.env.MONGO_URI, {
