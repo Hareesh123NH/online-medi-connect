@@ -23,7 +23,6 @@ router.get("/accept",authMiddleware("patient"),getAcceptedAppointmentsForPatient
 router.get("/reject",authMiddleware("patient"),getRejectedAppointmentsForPatient);
 
 //get doctors
-
 router.get("/doctors",getDoctors);
 
 module.exports = router;
