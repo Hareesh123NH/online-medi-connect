@@ -1,6 +1,6 @@
 const express=require('express');
 const router = express.Router();
-const { signup,requestAppointment,getPendingAppointmentsForPatient, getAcceptedAppointmentsForPatient, getRejectedAppointmentsForPatient } = require("../controllers/patientController");
+const { signup,requestAppointment,getPendingAppointmentsForPatient, getAcceptedAppointmentsForPatient, getRejectedAppointmentsForPatient, getDoctors } = require("../controllers/patientController");
 const authMiddleware = require('../middlewares/authMiddleware'); // sets req.user.id
 
 
@@ -21,5 +21,9 @@ router.get("/accept",authMiddleware("patient"),getAcceptedAppointmentsForPatient
 
 //get rejected appointments
 router.get("/reject",authMiddleware("patient"),getRejectedAppointmentsForPatient);
+
+//get doctors
+
+router.get("/doctors",getDoctors);
 
 module.exports = router;
